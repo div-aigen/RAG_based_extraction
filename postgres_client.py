@@ -1,8 +1,9 @@
-from logging import DEBUG
 import psycopg2
 import logging
 
-logging.basicConfig(level=DEBUG)
+logging.basicConfig(
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 class Client(object):
@@ -69,3 +70,42 @@ class Client(object):
                 self.connection.commit()
                 result = []
         return result
+
+    def create_embeddings_table(self, dim):
+        """creates a table with a vector column for storing embeddings
+            dim: The number of dimensions the embedding model operates on
+        """
+        create_extension_cmd = "create extension if not exists vector;"
+        create_table_cmd = f"""
+            create table if not exists sentence_embeddings (
+                id serial primary key,
+                sentence text,
+                embedding vector({dim})
+            );
+        """
+        self.execute(create_extension_cmd, None)
+        self.execute(create_table_cmd, None)
+
+    def insert_embeddings(self, sentences, embeddings):
+        """insert each sentence and its embedding into the database"""
+        for sentence, embedding in zip(sentences, embeddings):
+            embedding_list = embedding.tolist()
+            # check for duplicates
+            fetch_cmd = f"""
+                select 
+                    sentence 
+                from sentence_embeddings
+                where
+                    sentence = '{sentence}'
+            """
+            dup_data = self.fetch_one(fetch_cmd, None)
+            if dup_data is None:
+                insert_cmd = """
+                    insert into sentence_embeddings (sentence, embedding)
+                    values (%s, %s);
+                """
+                self.execute(insert_cmd, (sentence, embedding_list))
+                logger.info(f"The sentence '{sentence}' has been added with the embedding")
+            else:
+                logger.info(f"The sentence '{sentence}' is already embedded and stored in the DB")
+        return None

@@ -7,6 +7,7 @@ name = "pypi"
 gensim = "*"
 python-dotenv = "*"
 psycopg2-binary = "*"
+sentence-transformers = "*"
 
 [dev-packages]
 
