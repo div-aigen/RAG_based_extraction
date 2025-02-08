@@ -34,25 +34,9 @@ class GenerateEmbeddings:
                 max_tokens: This parameter is the maximum number of tokens that can exist within a chunk
         """
         model = SentenceTransformer(self.modelname)
-        # sentences = [
-        #     "Zinedine Zidane is a former football midfielder.",
-        #     "He played for clubs like Real Madrid, and Juventus.",
-        #     "He also won the 1998 World Cup with France."
-        # ]
         with open(file, 'r', encoding='utf-8') as file:
             text = file.read()
         sentences = sentence_chunking(text, max_tokens)
 
         embeddings = model.encode(sentences)
         return sentences, embeddings
-
-
-def main():
-    embedder = GenerateEmbeddings(MODELNAME, client)
-    sentences_, embeddings_ = embedder.get_embeddings('sample_text.txt', 20)
-    client.create_embeddings_table(dim=embeddings_.shape[1])
-    client.insert_embeddings(sentences_, embeddings_)
-    client.connection.close()
-
-if __name__ == "__main__":
-    main()

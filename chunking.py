@@ -40,9 +40,3 @@ def sentence_chunking(text, max_tokens):
         chunks.append(' '.join(current_chunk))
 
     return chunks
-
-with open('sample_text.txt', 'r', encoding='utf-8') as file:
-    text_ = file.read()
-max_tok = 20
-chunks_ = sentence_chunking(text_, max_tok)
-print(chunks_)

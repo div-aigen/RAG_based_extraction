@@ -71,6 +71,11 @@ class Client(object):
                 result = []
         return result
 
+    def get_next_sequence(self, sequence: str):
+        """get the next sequence value"""
+        cmd = """select nextval(%s)"""
+        return self.fetch_one(cmd, tuple([sequence]))
+
     def create_embeddings_table(self, dim):
         """creates a table with a vector column for storing embeddings
             dim: The number of dimensions the embedding model operates on
@@ -86,8 +91,8 @@ class Client(object):
         self.execute(create_extension_cmd, None)
         self.execute(create_table_cmd, None)
 
-    def insert_embeddings(self, sentences, embeddings):
-        """insert each sentence and its embedding into the database"""
+    def insert_knowledge_embeddings(self, sentences, embeddings):
+        """insert each sentence of the knowledge document and its embedding into the database"""
         for sentence, embedding in zip(sentences, embeddings):
             embedding_list = embedding.tolist()
             # check for duplicates
@@ -108,4 +113,30 @@ class Client(object):
                 logger.info(f"The sentence '{sentence}' has been added with the embedding")
             else:
                 logger.info(f"The sentence '{sentence}' is already embedded and stored in the DB")
+        return None
+
+    def insert_user_embeddings(self, sentence, embedding):
+        """inserts the user query and its embedding to the database"""
+        # check if the query doesn't already exist
+        fetch_cmd = f"""
+            select
+                user_input
+            from user_query
+            where
+                user_input = '{sentence}'
+        """
+        dup_data = self.fetch_one(fetch_cmd, None)
+        if dup_data is None:
+            try:
+                next_id = self.get_next_sequence('id_sequence')
+                insert_query = """
+                    insert into user_query (id, user_input, input_embedding)
+                    values (%s, %s, %s);
+                """
+                self.execute(insert_query, (next_id, sentence, embedding.tolist()))
+                logger.info(f"The input has been embedded and stored in the database")
+            except psycopg2.ProgrammingError as err:
+                logger.info(f"The insertion ran into some error: {err}", exc_info=True)
+        else:
+            logger.info("The user_query already exists, fetching from the database...")
         return None
