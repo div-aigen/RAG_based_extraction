@@ -8,6 +8,8 @@ gensim = "*"
 python-dotenv = "*"
 psycopg2-binary = "*"
 sentence-transformers = "*"
+llama-cpp-python = "*"
+groq = "*"
 
 [dev-packages]
 

@@ -2,6 +2,7 @@ import postgres_client
 import os
 from typing import List, Any, Optional
 from input_query import UserInput
+from groq import Groq
 
 client = postgres_client.Client()
 client.set_connection(
@@ -12,9 +13,10 @@ client.set_connection(
     os.getenv("password")
 )
 
+groq_client = Groq(api_key=os.getenv("groq_api_key"))
 MODELNAME = "all-MiniLM-L6-v2"
 
-def fetch_user_embedding(dbclient: Any) -> Optional[List]:
+def fetch_user_embedding(dbclient: Any) -> tuple[Optional[List], str]:
     user_client = UserInput(MODELNAME, client)
     user_input = input("How can I help you?: ")
     user_client.get_input_embeddings(user_input)
@@ -27,7 +29,7 @@ def fetch_user_embedding(dbclient: Any) -> Optional[List]:
     """
     embedding_user = dbclient.fetch_one(cmd, None)
     embedding = eval(embedding_user[0])
-    return embedding
+    return embedding, user_input
 
 def find_similar_sentence(dbclient: Any, query_embedding: List, n=5):
     """makes a similarity search to the knowledge base in the database"""
@@ -41,7 +43,40 @@ def find_similar_sentence(dbclient: Any, query_embedding: List, n=5):
     """
     return dbclient.fetch_all(query_cmd, (query_embedding, n))
 
+def format_context(similar_results: List) -> str:
+    """Format all the similar sentences into a context string"""
+    context = "\n".join([result[0] for result in similar_results])
+    return context
+
+def generate_response(user_query: str, context: str, chat_model="llama3-8b-8192") -> str:
+    """Generate a chat response using a model (Using Groq due to no GPU)"""
+    system_prompt = """You are a helpful assistant that answers questions based on the provided context. 
+    Use the context to provide accurate and relevant answers. If the context doesn't contain 
+    enough information to answer the question fully, acknowledge this and stick to what can be 
+    answered from the context."""
+
+    prompt = f"""Context: {context}\n\nQuestion: {user_query}\n\nPlease answer the question based on the 
+            context provided."""
+
+    chat_completion = groq_client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        model=chat_model,
+    )
+
+    return chat_completion.choices[0].message.content
+
 if __name__ == "__main__":
-    embed = fetch_user_embedding(client)
-    similar = find_similar_sentence(client, embed)
-    print("This might be of help: ", similar)
+    embed, user_query_ = fetch_user_embedding(client)
+    similar_results_ = find_similar_sentence(client, embed)
+    context_ = format_context(similar_results_)
+    response = generate_response(user_query_, context_)
+    print("\nResponse: ", response)
