@@ -76,8 +76,8 @@ def generate_response(user_query: str, context: str, chat_model="llama3-8b-8192"
 
 if __name__ == "__main__":
     user_ask = input("How can I help you?: ")
-    embed, user_query_ = fetch_user_embedding(client, user_ask)
+    embed = fetch_user_embedding(client, user_ask)
     similar_results_ = find_similar_sentence(client, embed)
     context_ = format_context(similar_results_)
-    response = generate_response(user_query_, context_)
+    response = generate_response(user_ask, context_)
     print("\nResponse: ", response)
