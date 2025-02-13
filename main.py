@@ -16,9 +16,8 @@ client.set_connection(
 groq_client = Groq(api_key=os.getenv("groq_api_key"))
 MODELNAME = "all-MiniLM-L6-v2"
 
-def fetch_user_embedding(dbclient: Any) -> tuple[Optional[List], str]:
+def fetch_user_embedding(dbclient: Any, user_input: str) -> tuple[Optional[List], str]:
     user_client = UserInput(MODELNAME, client)
-    user_input = input("How can I help you?: ")
     user_client.get_input_embeddings(user_input)
     cmd = f"""
         select 
@@ -29,9 +28,9 @@ def fetch_user_embedding(dbclient: Any) -> tuple[Optional[List], str]:
     """
     embedding_user = dbclient.fetch_one(cmd, None)
     embedding = eval(embedding_user[0])
-    return embedding, user_input
+    return embedding
 
-def find_similar_sentence(dbclient: Any, query_embedding: List, n=5):
+def find_similar_sentence(dbclient: Any, query_embedding: tuple[Optional[List], str], n=5):
     """makes a similarity search to the knowledge base in the database"""
     query_cmd = """
         select 
@@ -53,7 +52,8 @@ def generate_response(user_query: str, context: str, chat_model="llama3-8b-8192"
     system_prompt = """You are a helpful assistant that answers questions based on the provided context. 
     Use the context to provide accurate and relevant answers. If the context doesn't contain 
     enough information to answer the question fully, acknowledge this and stick to what can be 
-    answered from the context."""
+    answered from the context. Just start with the response directly. Also, avoid copying words as it 
+    is from the document."""
 
     prompt = f"""Context: {context}\n\nQuestion: {user_query}\n\nPlease answer the question based on the 
             context provided."""
@@ -75,7 +75,8 @@ def generate_response(user_query: str, context: str, chat_model="llama3-8b-8192"
     return chat_completion.choices[0].message.content
 
 if __name__ == "__main__":
-    embed, user_query_ = fetch_user_embedding(client)
+    user_ask = input("How can I help you?: ")
+    embed, user_query_ = fetch_user_embedding(client, user_ask)
     similar_results_ = find_similar_sentence(client, embed)
     context_ = format_context(similar_results_)
     response = generate_response(user_query_, context_)

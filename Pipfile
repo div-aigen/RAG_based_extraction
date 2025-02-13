@@ -10,6 +10,8 @@ psycopg2-binary = "*"
 sentence-transformers = "*"
 llama-cpp-python = "*"
 groq = "*"
+fastapi = "*"
+uvicorn = "*"
 
 [dev-packages]
 
