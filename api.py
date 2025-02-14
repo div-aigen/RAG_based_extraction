@@ -27,13 +27,11 @@ api = FastAPI(title="Retrieval Chat")
 @api.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """Login endpoint to get access token"""
-    print(f"Login attempt for username: {form_data.username}")
     user = get_user_from_db(form_data.username, client)
-    print(f"User found: {user}")
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Incorrect username or password {form_data.username}",
+            detail=f"Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
