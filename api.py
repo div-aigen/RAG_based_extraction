@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
 import logging
 import main
 import postgres_client
 import os
 import uvicorn
+from auth import create_access_token, verify_token, get_user_from_db, verify_password
+from datetime import timedelta
 
 logging.basicConfig(
     level=logging.INFO
@@ -19,10 +22,30 @@ client.set_connection(
     os.getenv("password")
 )
 
-api = FastAPI(title="Skibidi Chat")
+api = FastAPI(title="Retrieval Chat")
+
+@api.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Login endpoint to get access token"""
+    print(f"Login attempt for username: {form_data.username}")
+    user = get_user_from_db(form_data.username, client)
+    print(f"User found: {user}")
+    if not user or not verify_password(form_data.password, user["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Incorrect username or password {form_data.username}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token_expires = timedelta(minutes=30)
+    access_token = create_access_token(
+        data={"sub": user["username"]}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @api.post("/chat/{user_query}")
-def fetch(user_query: str):
+async def fetch(user_query: str, current_user: str = Depends(verify_token)):
+    """Protected chat endpoint"""
     embed = main.fetch_user_embedding(client, user_query)
     similar_results = main.find_similar_sentence(client, embed)
     context = main.format_context(similar_results)
@@ -33,7 +56,7 @@ def fetch(user_query: str):
     }
 
 @api.get("/health")
-async def health_check():
+def health_check():
     """Health check endpont"""
     return {"status": "healthy"}
 

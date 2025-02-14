@@ -9,3 +9,5 @@ Instead of using traditional vector database, this repository tackles with setti
 - perform cosine similarity to get the best answer to the user query (Implemented)
 - scale in order to provide any new knowledge document during runtime (if any)
 - a chat model is introduced which can gather all the fetched similarities and combine them to frame one answer. (Implemented)
+- Add a users table in the database which stores the usernames and hashed passwords.
+- Add an authorization method which verifies the access token from the user in order to allow chat access.
