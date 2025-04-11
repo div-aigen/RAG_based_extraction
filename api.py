@@ -26,7 +26,10 @@ api = FastAPI(title="Retrieval Chat")
 
 @api.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Login endpoint to get access token"""
+    """Login endpoint to get access token
+        form_data: uses Oauth2 request form utility for parsing and handling incoming requests
+        when client requests an access token using the password grant type.
+    """
     user = get_user_from_db(form_data.username, client)
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(
@@ -43,7 +46,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @api.post("/chat/{user_query}")
 async def fetch(user_query: str, current_user: str = Depends(verify_token)):
-    """Protected chat endpoint"""
+    """Protected chat endpoint
+        current_user: This parameter is for authentication purposes. With Depends(verify_token)
+        it acts as a dependency check - the function will only execute if a valid token is
+        provided and verified.
+    """
     embed = main.fetch_user_embedding(client, user_query)
     similar_results = main.find_similar_sentence(client, embed)
     context = main.format_context(similar_results)

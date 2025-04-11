@@ -1,4 +1,4 @@
-def sentence_chunking(text, max_tokens):
+def sentence_chunking(text: str, max_tokens: int):
     # Split into sentences first (handling common sentence endings)
     sentences = []
     current_sentence = []

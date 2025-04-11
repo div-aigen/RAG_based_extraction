@@ -76,13 +76,13 @@ class Client(object):
         cmd = """select nextval(%s)"""
         return self.fetch_one(cmd, tuple([sequence]))
 
-    def create_embeddings_table(self, dim):
+    def create_embeddings_table(self, dim, schema: str = "public"):
         """creates a table with a vector column for storing embeddings
             dim: The number of dimensions the embedding model operates on
         """
         create_extension_cmd = "create extension if not exists vector;"
         create_table_cmd = f"""
-            create table if not exists sentence_embeddings (
+            create table if not exists {schema}.sentence_embeddings (
                 id serial primary key,
                 sentence text,
                 embedding vector({dim})
@@ -91,7 +91,7 @@ class Client(object):
         self.execute(create_extension_cmd, None)
         self.execute(create_table_cmd, None)
 
-    def insert_knowledge_embeddings(self, sentences, embeddings):
+    def insert_knowledge_embeddings(self, sentences, embeddings, schema: str = "public"):
         """insert each sentence of the knowledge document and its embedding into the database"""
         for sentence, embedding in zip(sentences, embeddings):
             embedding_list = embedding.tolist()
@@ -99,14 +99,14 @@ class Client(object):
             fetch_cmd = f"""
                 select 
                     sentence 
-                from sentence_embeddings
+                from {schema}.sentence_embeddings
                 where
                     sentence = '{sentence}'
             """
             dup_data = self.fetch_one(fetch_cmd, None)
             if dup_data is None:
-                insert_cmd = """
-                    insert into sentence_embeddings (sentence, embedding)
+                insert_cmd = f"""
+                    insert into {schema}.sentence_embeddings (sentence, embedding)
                     values (%s, %s);
                 """
                 self.execute(insert_cmd, (sentence, embedding_list))
@@ -115,13 +115,13 @@ class Client(object):
                 logger.info(f"The sentence '{sentence}' is already embedded and stored in the DB")
         return None
 
-    def insert_user_embeddings(self, sentence, embedding):
+    def insert_user_embeddings(self, sentence, embedding, schema: str = "public"):
         """inserts the user query and its embedding to the database"""
         # check if the query doesn't already exist
         fetch_cmd = f"""
             select
                 user_input
-            from user_query
+            from {schema}.user_query
             where
                 user_input = '{sentence}'
         """
@@ -129,8 +129,8 @@ class Client(object):
         if dup_data is None:
             try:
                 next_id = self.get_next_sequence('id_sequence')
-                insert_query = """
-                    insert into user_query (id, user_input, input_embedding)
+                insert_query = f"""
+                    insert into {schema}.user_query (id, user_input, input_embedding)
                     values (%s, %s, %s);
                 """
                 self.execute(insert_query, (next_id, sentence, embedding.tolist()))

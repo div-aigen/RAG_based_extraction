@@ -9,5 +9,11 @@ Instead of using traditional vector database, this repository tackles with setti
 - perform cosine similarity to get the best answer to the user query (Implemented)
 - scale in order to provide any new knowledge document during runtime (if any)
 - a chat model is introduced which can gather all the fetched similarities and combine them to frame one answer. (Implemented)
-- Add a users table in the database which stores the usernames and hashed passwords.
-- Add an authorization method which verifies the access token from the user in order to allow chat access.
+- Add a users table in the database which stores the usernames and hashed passwords. (Implemented)
+- Add an authorization method which verifies the access token from the user in order to allow chat access. (Implemented)
+- Each new document can be inconvenient to store in the same database. But storing in separate DBs might cause scaling problems. 
+Optimally, store new documents in new schemas within the same DB:
+  - define a new schema parameter in the methods
+  - the schema name can be the name of the document (default=public)
+  - the naming convention for the embeddings table should be {schemaname}_embeddings (for convenience)
+  - There should be a separate api which can add the knowledge documents to the specific schema and table.

@@ -16,13 +16,13 @@ client.set_connection(
 groq_client = Groq(api_key=os.getenv("groq_api_key"))
 MODELNAME = "all-MiniLM-L6-v2"
 
-def fetch_user_embedding(dbclient: Any, user_input: str) -> tuple[Optional[List], str]:
+def fetch_user_embedding(dbclient: Any, user_input: str, schema: str="public") -> tuple[Optional[List], str]:
     user_client = UserInput(MODELNAME, client)
     user_client.get_input_embeddings(user_input)
     cmd = f"""
         select 
             input_embedding
-        from user_query
+        from {schema}.user_query
         where
             user_input = '{user_input}'
     """
@@ -30,13 +30,13 @@ def fetch_user_embedding(dbclient: Any, user_input: str) -> tuple[Optional[List]
     embedding = eval(embedding_user[0])
     return embedding
 
-def find_similar_sentence(dbclient: Any, query_embedding: tuple[Optional[List], str], n=5):
+def find_similar_sentence(dbclient: Any, query_embedding: tuple[Optional[List], str], n=5, schema: str="public"):
     """makes a similarity search to the knowledge base in the database"""
-    query_cmd = """
+    query_cmd = f"""
         select 
             sentence, 
             embedding <-> %s::vector as distance
-        from sentence_embeddings
+        from {schema}.sentence_embeddings
         order by distance asc
         limit %s;
     """
